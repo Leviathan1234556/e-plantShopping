@@ -2,14 +2,18 @@
 import React from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { removeItem, updateQuantity } from './CartSlice';
-import './CartItem.css'; // Import the custom CSS file
+import './CartItem.css';
 
 const CartItem = ({ onContinueShopping }) => {
   const cart = useSelector((state) => state.cart.items);
   const dispatch = useDispatch();
 
   const calculateTotalAmount = () => {
-    return cart.reduce((total, item) => total + item.quantity * item.cost, 0);
+    return cart.reduce((total, item) => {
+      // Remove the '$' symbol and convert to number
+      const cost = parseFloat(item.cost.replace('$', ''));
+      return total + (cost * item.quantity);
+    }, 0).toFixed(2);
   };
 
   const handleContinueShopping = () => {
@@ -40,7 +44,10 @@ const CartItem = ({ onContinueShopping }) => {
             <img src={item.image} alt={item.name} className="cart-item-image" />
             <div className="cart-item-details">
               <h3 className="cart-item-name">{item.name}</h3>
-              <p className="cart-item-cost">Cost: ${item.cost}</p>
+              <p className="cart-item-cost">Cost: {item.cost}</p>
+              <p className="cart-item-subtotal">
+                Subtotal: ${(parseFloat(item.cost.replace('$', '')) * item.quantity).toFixed(2)}
+              </p>
               <div className="cart-item-quantity">
                 <button className="cart-item-button" onClick={() => handleDecrement(item)}>-</button>
                 <span className="cart-item-quantity-value">{item.quantity}</span>
@@ -50,6 +57,9 @@ const CartItem = ({ onContinueShopping }) => {
             </div>
           </div>
         ))}
+      </div>
+      <div className="cart-total">
+        <h2>Total Amount: ${calculateTotalAmount()}</h2>
       </div>
     </div>
   );

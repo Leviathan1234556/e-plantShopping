@@ -5,6 +5,13 @@ import { addItem } from './CartSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 
+function chunk(array, size) {
+    const chunked = [];
+    for (let i = 0; i < array.length; i += size) {
+        chunked.push(array.slice(i, i + size));
+    }
+    return chunked;
+}
 function ProductList() {
     const dispatch = useDispatch();
     const cartItems = useSelector((state) => state.cart.items); // Get cart items from the redux store
@@ -27,11 +34,8 @@ function ProductList() {
         }));
     };
 
-    const calculateTotal = () => {
-        return cartItems.reduce((total, item) => {
-            const price = parseFloat(item.cost.replace('$', ''));
-            return total + price;
-        }, 0).toFixed(2); // Calculate total and format to 2 decimal places
+    const calculateTotalItems = () => {
+        return cartItems.reduce((total, item) => total + item.quantity, 0);
     };
     const plantsArray = [
         {
@@ -246,14 +250,16 @@ function ProductList() {
         padding: '15px',
         display: 'flex',
         justifyContent: 'space-between',
-        alignIems: 'center',
+        alignItems: 'center',
         fontSize: '20px',
+        width: '100%'  // Added width
     }
+
     const styleObjUl = {
         display: 'flex',
-        justifyContent: 'space-between',
+        justifyContent: 'space-around',  // Changed from space-between
         alignItems: 'center',
-        width: '1100px',
+        width: '300px',  // Reduced width
     }
     const styleA = {
         color: 'white',
@@ -275,12 +281,6 @@ function ProductList() {
         e.preventDefault();
         setShowCart(false);
     };
-    const handleCheckout = () => {
-        alert("Proceeding to checkout! Total amount: $" + calculateTotal());
-        // Here you can implement the checkout logic, such as redirecting to a checkout page.
-    };
-
-
     return (
         <div>
             <div className="navbar" style={styleObj}>
@@ -297,32 +297,47 @@ function ProductList() {
                 </div>
                 <div style={styleObjUl}>
                     <div><a href="#" onClick={handlePlantsClick} style={styleA}>Plants</a></div>
-                    <div><a href="#" onClick={handleCartClick} style={styleA}>
-                        <h1 className='cart'>
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" id="IconChangeColor" height="68" width="68">
-                                <rect width="156" height="156" fill="none"></rect>
-                                <circle cx="80" cy="216" r="12"></circle>
-                                <circle cx="184" cy="216" r="12"></circle>
-                                <path d="M42.3,72H221.7l-26.4,92.4A15.9,15.9,0,0,1,179.9,176H84.1a15.9,15.9,0,0,1-15.4-11.6L32.5,37.8A8,8,0,0,0,24.8,32H8" fill="none" stroke="#faf9f9" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" id="mainIconPathAttribute"></path>
-                            </svg>
-                        </h1>
-                    </a></div>
+                    <div className="cart-container">
+                        <a href="#" onClick={handleCartClick} style={styleA}>
+                            <div className='cart-icon-container'>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" id="IconChangeColor" height="40" width="40">  {/* Reduced size */}
+                                    <rect width="156" height="156" fill="none"></rect>
+                                    <circle cx="80" cy="216" r="12"></circle>
+                                    <circle cx="184" cy="216" r="12"></circle>
+                                    <path d="M42.3,72H221.7l-26.4,92.4A15.9,15.9,0,0,1,179.9,176H84.1a15.9,15.9,0,0,1-15.4-11.6L32.5,37.8A8,8,0,0,0,24.8,32H8" fill="none" stroke="#faf9f9" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" id="mainIconPathAttribute"></path>
+                                </svg>
+                                {cartItems.length > 0 && (
+                                    <span className="cart-count">{calculateTotalItems()}</span>
+                                )}
+                            </div>
+                        </a>
+                    </div>
                 </div>
             </div>
 
             {!showCart && showPlants ? (
                 <div className="product-grid">
                     {plantsArray.map(category => (
-                        <div key={category.category}>
-                            <h2>{category.category}</h2>
+                        <div key={category.category} className="category-section">
+                            <h2 className="category-title">{category.category}</h2>
                             <div className='plant-grid'>
-                                {category.plants.map(plant => (
-                                    <div key={plant.name} className='plant-card'>
-                                        <img src={plant.image} alt={plant.name} className='plant-image' />
-                                        <h3>{plant.name}</h3>
-                                        <p>{plant.description}</p>
-                                        <p><strong>{plant.cost}</strong></p>
-                                        <button className='product-button' onClick={() => handleAddToCart(plant)}>Add to Cart</button>
+                                {chunk(category.plants, 3).map((row, rowIndex) => (
+                                    <div key={rowIndex} className="plant-row">
+                                        {row.map(plant => (
+                                            <div key={plant.name} className='plant-card'>
+                                                <img src={plant.image} alt={plant.name} className='plant-image' />
+                                                <h3>{plant.name}</h3>
+                                                <p>{plant.description}</p>
+                                                <p><strong>{plant.cost}</strong></p>
+                                                <button
+                                                    className={`product-button ${addedToCart[plant.name] ? 'added' : ''}`}
+                                                    onClick={() => handleAddToCart(plant)}
+                                                    disabled={addedToCart[plant.name]}
+                                                >
+                                                    {addedToCart[plant.name] ? 'Added to Cart' : 'Add to Cart'}
+                                                </button>
+                                            </div>
+                                        ))}
                                     </div>
                                 ))}
                             </div>
@@ -332,10 +347,22 @@ function ProductList() {
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', marginTop: '20px' }}>
                     <CartItem onContinueShopping={handleContinueShopping} />
-                    <h2>Total Amount: ${calculateTotal()}</h2>
                     <div>
-                        <button onClick={handleCheckout} className="checkout-button" style={{ margin: '10px' }}>Checkout</button>
-                        <button onClick={handleContinueShopping} className="continue-shopping-button" style={{ margin: '10px' }}>Continue Shopping</button>
+                        <button
+                            disabled
+                            className="checkout-button-disabled"
+                            style={{ margin: '10px' }}
+                            title="This feature is coming soon!"  // This adds a tooltip on hover
+                        >
+                            Checkout (Coming Soon)
+                        </button>
+                        <button
+                            onClick={handleContinueShopping}
+                            className="continue-shopping-button"
+                            style={{ margin: '10px' }}
+                        >
+                            Continue Shopping
+                        </button>
                     </div>
                 </div>
             )}
